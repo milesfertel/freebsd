@@ -19,7 +19,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "WikiHelpers.h"
+#include "wikihelpers.h"
 
 /* bottom-up merge sort combined with an in-place merge algorithm for O(1) memory use */
 int WikiSort(void *arr, size_t nmemb, size_t size, Comparison compare) {
@@ -56,6 +56,9 @@ int WikiSort(void *arr, size_t nmemb, size_t size, Comparison compare) {
 			if (COMPARE(Index_addr(array, 1), Index_addr(array, 0)))
 				Swap(Index_addr(array, 0), Index_addr(array, 1), size);
 		}
+
+		if (cache)
+			free(cache);
 
 		return 0;
 	}
@@ -147,8 +150,12 @@ int WikiSort(void *arr, size_t nmemb, size_t size, Comparison compare) {
 			SWAP(1, 2);
 		}
 	}
-	if (nmemb < 8)
+
+	if (nmemb < 8) {
+		if (cache)
+			free(cache);
 		return 0;
+	}
 
 #if DYNAMIC_CACHE
 	/* good choices for the cache size are: */
@@ -175,7 +182,6 @@ int WikiSort(void *arr, size_t nmemb, size_t size, Comparison compare) {
 		}
 	}
 #endif
-
 	/* then merge sort the higher levels, which can be 8-15, 16-31, 32-63, 64-127, etc. */
 	while (true) {
 		/* if every A and B block will fit into the cache, use a special branch specifically for merging with the cache */
@@ -656,10 +662,8 @@ int WikiSort(void *arr, size_t nmemb, size_t size, Comparison compare) {
 			break;
 	}
 
-#if DYNAMIC_CACHE
 	if (cache)
 		free(cache);
-#endif
 	return 0;
 #undef CACHE_SIZE
 }

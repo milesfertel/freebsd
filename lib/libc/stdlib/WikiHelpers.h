@@ -1,8 +1,6 @@
 /* whether to give WikiSort a full-size cache, to see how it performs when given more memory */
 #define DYNAMIC_CACHE false
 
-#define Var(name, value)				__typeof__(value) name = value
-#define Allocate(type, count)				(type *)malloc((count) * sizeof(type))
 // Gets the address of a given index in an array
 #define Index_addr(base, ind) ((base) + ((size) * (ind)))
 #define COMPARE(arg1, arg2) ((compare(arg1, arg2) == 1))
@@ -285,7 +283,7 @@ void MergeInto(void *arr_from, const Range A, const Range B, size_t size, const 
 			insert_index += size;
 			if (A_index == A_last) {
 				/* copy the remainder of B into the final array */
-				memcpy(insert_index, B_index, (B_last - B_index) * size);
+				memcpy(insert_index, B_index, (B_last - B_index));
 				break;
 			}
 		} else {
@@ -295,7 +293,7 @@ void MergeInto(void *arr_from, const Range A, const Range B, size_t size, const 
 			insert_index += size;
 			if (B_index == B_last) {
 				/* copy the remainder of A into the final array */
-				memcpy(insert_index, A_index, (A_last - A_index) * size);
+				memcpy(insert_index, A_index, (A_last - A_index));
 				break;
 			}
 		}
@@ -332,7 +330,7 @@ void MergeExternal(void *arr, const Range A, const Range B, size_t size, const C
 	}
 
 	/* copy the remainder of A into the final array */
-	memcpy(insert_index, A_index, (A_last - A_index) * size);
+	memcpy(insert_index, A_index, (A_last - A_index));
 }
 
 /* merge operation using an internal buffer */
