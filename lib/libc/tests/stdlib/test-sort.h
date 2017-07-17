@@ -39,10 +39,73 @@ static int sorthelp(const void *a, const void *b) {
 	oa = a;
 	ob = b;
 	/* Don't use "return *oa - *ob" since it's easy to cause overflow! */
-	if (*oa > *ob) return (1);
 	if (*oa < *ob) return (-1);
+	if (*oa > *ob) return (1);
 	return (0);
 }
+
+static int csorthelp(const void *a, const void *b) {
+	const char *oa, *ob;
+
+	oa = a;
+	ob = b;
+	/* Don't use "return *oa - *ob" since it's easy to cause overflow! */
+	if (*oa < *ob) return (-1);
+	if (*oa > *ob) return (1);
+	return (0);
+}
+
+static int oddsorthelp(const void *a, const void *b) {
+	const char (*oa)[3], (*ob)[3];
+
+	oa = a;
+	ob = b;
+	/* Don't use "return *oa - *ob" since it's easy to cause overflow! */
+	if (*oa[0] < *ob[0]) return (-1);
+	if (*oa[0] > *ob[0]) return (1);
+	return (0);
+}
+
+static int ptrsorthelp(const void *a, const void *b) {
+	const int **oa, **ob;
+	oa = (const int**)a;
+	ob = (const int**)b;
+	/* Don't use "return *oa - *ob" since it's easy to cause overflow! */
+	if (*oa < *ob) return (-1);
+	if (*oa > *ob) return (1);
+	return (0);
+}
+
+struct big {
+	int value;
+	int spacetaker[100];
+};
+
+static int bigsorthelp(const void *a, const void *b) {
+	const struct big *oa, *ob;
+	oa = a;
+	ob = b;
+	/* Don't use "return *oa - *ob" since it's easy to cause overflow! */
+	if (oa->value < ob->value) return (-1);
+	if (oa->value > ob->value) return (1);
+	return (0);
+}
+
+struct stable {
+    int key;
+    int value;
+};
+
+static int stablesorthelp(const void *a, const void *b) {
+	const struct stable *oa, *ob;
+	oa = a;
+	ob = b;
+	/* Don't use "return *oa - *ob" since it's easy to cause overflow! */
+	if (oa->value < ob->value) return (-1);
+	if (oa->value > ob->value) return (1);
+	return (0);
+}
+
 
 /* Reference sorting routine (slooow!) */
 static void ssort(int v[], int nmemb) {
