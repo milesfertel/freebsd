@@ -47,6 +47,7 @@ BINDIR=		${TESTSDIR}
 PROGS+=		h_getopt h_getopt_long
 
 CFLAGS+=	-I${.CURDIR}
+CFLAGS+= 	-I${.CURDIR:H:H}
 
 CXXFLAGS.cxa_thread_atexit_test+=	-std=c++11
 CXXFLAGS.cxa_thread_atexit_nothr_test+=	-std=c++11
