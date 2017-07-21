@@ -1,10 +1,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include "stdlib/wiki.c"
+#include <unistd.h>
 
-int Trials;
+#include "stdlib/wiki.c"
 
 int
 sorthelp(const void *a, const void *b)
@@ -16,88 +15,55 @@ sorthelp(const void *a, const void *b)
 	return 0;
 }
 
-#define SORT_CMP  	sorthelp
-#define SORT_TYPE 	int
-#define TESTS     	4
-/*
- * Average the times over multiple trials, the number of trials decreasing
- * as the number of elements increases
- */
-#define TRIALS    	30
-#define MIN_TRIALS	5
+#define SORT_CMP sorthelp
+#define SORT_TYPE int
+#define NARGS 5
 
-// Test from 2^BASE to 2^MAX elements
-#define BASE      	10
-#define MAX       	27
+enum test { RAND, SORT, PART, REV, INVALID_TEST };
+enum sort { MERGE, WIKI, QUICK, HEAP, INVALID_ALG };
 
-enum test { RAND, SORT, PART, REV };
-
-static double
-time_mergesort(int elts, SORT_TYPE *array)
+static void
+sort(SORT_TYPE *testarray, int elts, enum sort s)
 {
-	SORT_TYPE *testarray = malloc(sizeof(SORT_TYPE) * elts);
-	memcpy(testarray, array, elts * sizeof(SORT_TYPE));
-	clock_t sum = 0;
-	for (int i = 0; i < Trials; i++) {
-		clock_t begin = clock();
+	switch (s) {
+	case MERGE:
 		mergesort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
-		clock_t end = clock();
-		sum += (end - begin);
-	}
-	clock_t average = sum / (clock_t)Trials;
-	free(testarray);
-	return (double)average / CLOCKS_PER_SEC;
-}
-
-static double
-time_wikisort(int elts, SORT_TYPE *array)
-{
-	SORT_TYPE *testarray = malloc(sizeof(SORT_TYPE) * elts);
-	memcpy(testarray, array, elts * sizeof(SORT_TYPE));
-	clock_t sum = 0;
-	for (int i = 0; i < Trials; i++) {
-		clock_t begin = clock();
+		break;
+	case WIKI:
 		WikiSort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
-		clock_t end = clock();
-		sum += (end - begin);
+		break;
+	case QUICK:
+		qsort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
+		break;
+	case HEAP:
+		heapsort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
+		break;
 	}
-	clock_t average = sum / (clock_t)Trials;
-	free(testarray);
-	return (double)average / CLOCKS_PER_SEC;
 }
 
 static void
-time_bench(int elts, SORT_TYPE *array)
+rand_bench(int elts, enum sort s)
 {
-	double mtime = time_mergesort(elts, array);
-	double wtime = time_wikisort(elts, array);
-	printf("%-12d%-16f%8f\n", elts, mtime, wtime);
-}
-
-static void
-rand_bench(int elts)
-{
-	SORT_TYPE *array = malloc(sizeof(SORT_TYPE) * elts);
-	for (int i = 0; i < elts; i++) {
-		array[i] = rand();
-	}
-	time_bench(elts, array);
+	size_t size = sizeof(SORT_TYPE) * elts;
+	SORT_TYPE *array = malloc(size);
+	arc4random_buf(array, size);
+	sort(array, elts, s);
 	free(array);
 }
 
 static void
-sort_bench(int elts)
+sort_bench(int elts, enum sort s)
 {
 	SORT_TYPE *array = malloc(sizeof(SORT_TYPE) * elts);
 	for (int i = 0; i < elts; i++) {
 		array[i] = i;
 	}
-	time_bench(elts, array);
+	sort(array, elts, s);
 	free(array);
 }
 
 static void
-partial_bench(int elts)
+partial_bench(int elts, enum sort s)
 {
 	SORT_TYPE *array = malloc(sizeof(SORT_TYPE) * elts);
 	for (int i = 0; i < elts; i++) {
@@ -106,73 +72,97 @@ partial_bench(int elts)
 		else
 			array[i] = rand();
 	}
-	time_bench(elts, array);
+	sort(array, elts, s);
 	free(array);
 }
 
 static void
-reverse_bench(int elts)
+reverse_bench(int elts, enum sort s)
 {
 	SORT_TYPE *array = malloc(sizeof(SORT_TYPE) * elts);
 	for (int i = 0; i < elts; i++) {
 		array[i] = elts - i;
 	}
-	time_bench(elts, array);
+	sort(array, elts, s);
 	free(array);
 }
 
 static void
-run_bench(enum test t)
+run_bench(enum sort s, enum test t, int runs, int elts)
 {
-	printf("|----------------------------------------------------|\n");
-	switch (t) {
+	for (int i = 0; i < runs; i++) {
+		switch (t) {
 		case RAND:
-			printf("Benchmarks for a randomly generated array\n");
+			rand_bench(elts, s);
 			break;
 		case SORT:
-			printf("Benchmarks for a sorted array\n");
+			sort_bench(elts, s);
 			break;
 		case PART:
-			printf("Benchmarks for a partially sorted array\n");
+			partial_bench(elts, s);
 			break;
 		case REV:
-			printf("Benchmarks for a reversed array\n");
+			reverse_bench(elts, s);
 			break;
-	}
-	printf("%-12s%-16s%8s\n", "Size", "Original", "Wikisort");
-	Trials = TRIALS;
-	int base = pow(2, BASE);
-	int max = pow(2, MAX);
-	for (int elts = base; elts < max; elts *= 2) {
-		switch (t) {
-			case RAND:
-				rand_bench(elts);
-				break;
-			case SORT:
-				sort_bench(elts);
-				break;
-			case PART:
-				partial_bench(elts);
-				break;
-			case REV:
-				reverse_bench(elts);
-				break;
 		}
-		if (Trials > MIN_TRIALS)
-			Trials--;
 	}
 }
+
+static enum sort
+parse_alg(char *alg)
+{
+	if (strcmp(alg, "merge") == 0)
+		return MERGE;
+	else if (strcmp(alg, "wiki") == 0)
+		return WIKI;
+	else if (strcmp(alg, "quick") == 0)
+		return QUICK;
+	else if (strcmp(alg, "heap") == 0)
+		return HEAP;
+	else
+		return INVALID_ALG;
+}
+
+static enum test
+parse_test(char *test)
+{
+	if (strcmp(test, "rand") == 0)
+		return RAND;
+	else if (strcmp(test, "sort") == 0)
+		return SORT;
+	else if (strcmp(test, "part") == 0)
+		return PART;
+	else if (strcmp(test, "rev") == 0)
+		return REV;
+	else
+		return INVALID_TEST;
+}
+
 /*
- * Tests the running time in seconds of WikiSort as compared to stdlib's
- * mergesort implementation
+ * Runs a sorting algorithm with a provided data configuration according to
+ * command line arguments
  */
 int
-main()
+main(int argc, char *argv[])
 {
-	printf("Benchmarking... (Time is in seconds)\n");
-	srand(time(NULL));  // randomize seed
-	for (int test = 0; test < TESTS; test++) {
-		run_bench(test);
+	int runs, elts;
+	if (argc != NARGS) {
+		fprintf(stderr, "Incorrect number of arguments.\n");
+		return 1;
 	}
-	printf("|----------------------------------------------------|\n");
+
+	enum sort s = parse_alg(argv[1]);
+	if (s == INVALID_ALG) {
+		fprintf(stderr, "Invalid Algorithm as argument.\n");
+		return 1;
+	}
+	enum test t = parse_test(argv[2]);
+	if (t == INVALID_TEST) {
+		fprintf(stderr, "Invalid Test type as argument.\n");
+		return 1;
+	}
+	runs = atoi(argv[3]);
+	elts = pow(2, atoi(argv[4]));
+
+	run_bench(s, t, runs, elts);
 }
