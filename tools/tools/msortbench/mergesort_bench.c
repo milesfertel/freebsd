@@ -1,9 +1,13 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 
+#ifdef WIKI
 #include "stdlib/wiki.c"
+#endif
 
 int
 sorthelp(const void *a, const void *b)
@@ -15,28 +19,28 @@ sorthelp(const void *a, const void *b)
 	return 0;
 }
 
-#define SORT_CMP sorthelp
-#define SORT_TYPE int
 #define NARGS 5
 
 enum test { RAND, SORT, PART, REV, INVALID_TEST };
 enum sort { MERGE, WIKI, QUICK, HEAP, INVALID_ALG };
 
 static void
-sort(SORT_TYPE *testarray, int elts, enum sort s)
+sort(int *testarray, int elts, enum sort s)
 {
 	switch (s) {
 	case MERGE:
-		mergesort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
+		mergesort(testarray, (size_t)elts, sizeof(int), sorthelp);
 		break;
+#ifdef WIKI
 	case WIKI:
-		WikiSort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
+		WikiSort(testarray, (size_t)elts, sizeof(int), sorthelp);
 		break;
+#endif
 	case QUICK:
-		qsort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
+		qsort(testarray, (size_t)elts, sizeof(int), sorthelp);
 		break;
 	case HEAP:
-		heapsort(testarray, (size_t)elts, sizeof(SORT_TYPE), SORT_CMP);
+		heapsort(testarray, (size_t)elts, sizeof(int), sorthelp);
 		break;
 	}
 }
@@ -44,8 +48,8 @@ sort(SORT_TYPE *testarray, int elts, enum sort s)
 static void
 rand_bench(int elts, enum sort s)
 {
-	size_t size = sizeof(SORT_TYPE) * elts;
-	SORT_TYPE *array = malloc(size);
+	size_t size = sizeof(int) * elts;
+	int *array = malloc(size);
 	arc4random_buf(array, size);
 	sort(array, elts, s);
 	free(array);
@@ -54,7 +58,8 @@ rand_bench(int elts, enum sort s)
 static void
 sort_bench(int elts, enum sort s)
 {
-	SORT_TYPE *array = malloc(sizeof(SORT_TYPE) * elts);
+	size_t size = sizeof(int) * elts;
+	int *array = malloc(size);
 	for (int i = 0; i < elts; i++) {
 		array[i] = i;
 	}
@@ -65,7 +70,8 @@ sort_bench(int elts, enum sort s)
 static void
 partial_bench(int elts, enum sort s)
 {
-	SORT_TYPE *array = malloc(sizeof(SORT_TYPE) * elts);
+	size_t size = sizeof(int) * elts;
+	int *array = malloc(size);
 	for (int i = 0; i < elts; i++) {
 		if (i <= elts / 2)
 			array[i] = i;
@@ -79,7 +85,8 @@ partial_bench(int elts, enum sort s)
 static void
 reverse_bench(int elts, enum sort s)
 {
-	SORT_TYPE *array = malloc(sizeof(SORT_TYPE) * elts);
+	size_t size = sizeof(int) * elts;
+	int *array = malloc(size);
 	for (int i = 0; i < elts; i++) {
 		array[i] = elts - i;
 	}
@@ -113,8 +120,10 @@ parse_alg(char *alg)
 {
 	if (strcmp(alg, "merge") == 0)
 		return MERGE;
+#ifdef WIKI
 	else if (strcmp(alg, "wiki") == 0)
 		return WIKI;
+#endif
 	else if (strcmp(alg, "quick") == 0)
 		return QUICK;
 	else if (strcmp(alg, "heap") == 0)
@@ -138,6 +147,27 @@ parse_test(char *test)
 		return INVALID_TEST;
 }
 
+static void
+usage(const char *progname)
+{
+	printf("Usage:\n");
+	printf("\t%s: [alg] [test] [runs] [elt_power]\n", progname);
+	printf("\n");
+	printf("Valid algs:\n");
+#ifdef WIKI
+	printf("\theap merge quick wiki\n");
+#else
+	printf("\theap merge quick\n");
+#endif
+	printf("Valid tests:\n");
+	printf("\trand sort part rev\n");
+	printf("\trand: Random element array \n");
+	printf("\tsort: Increasing order array \n");
+	printf("\tpart: Partially ordered array\n");
+	printf("\trev: Decreasing order array\n");
+	printf("Run the algorithm [runs] times with 2^[elt_power] elements\n");
+}
+
 /*
  * Runs a sorting algorithm with a provided data configuration according to
  * command line arguments
@@ -145,21 +175,22 @@ parse_test(char *test)
 int
 main(int argc, char *argv[])
 {
+	const char *progname = argv[0];
 	int runs, elts;
 	if (argc != NARGS) {
-		fprintf(stderr, "Incorrect number of arguments.\n");
-		return 1;
+		usage(progname);
+		exit(EX_USAGE);
 	}
 
 	enum sort s = parse_alg(argv[1]);
 	if (s == INVALID_ALG) {
-		fprintf(stderr, "Invalid Algorithm as argument.\n");
-		return 1;
+		usage(progname);
+		exit(EX_USAGE);
 	}
 	enum test t = parse_test(argv[2]);
 	if (t == INVALID_TEST) {
-		fprintf(stderr, "Invalid Test type as argument.\n");
-		return 1;
+		usage(progname);
+		exit(EX_USAGE);
 	}
 	runs = atoi(argv[3]);
 	elts = pow(2, atoi(argv[4]));
