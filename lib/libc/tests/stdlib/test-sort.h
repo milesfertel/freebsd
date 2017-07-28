@@ -160,39 +160,33 @@ stablesorthelp(const void *a, const void *b)
 	return (0);
 }
 
-/* Reference sorting routine for integers (slooow!) */
-static void
-ssort(int v[], int nmemb)
-{
-	int i, j, k;
-
-	for (i = 0; i < nmemb; i++) {
-		for (j = i + 1; j < nmemb; j++) {
-			if (v[j] < v[i]) {
-				k = v[i];
-				v[i] = v[j];
-				v[j] = k;
-			}
-		}
+#define swap(a, b)                  \
+	{                           \
+		s = b;              \
+		i = size;           \
+		do {                \
+			tmp = *a;   \
+			*a++ = *s;  \
+			*s++ = tmp; \
+		} while (--i);      \
+		a -= size;          \
 	}
-}
 
-/* Reference sorting routine for chars (slooow!) */
+/* Reference stable sorting routine for integers (slooow!) */
 static void
-scsort(char v[], int nmemb)
+insertionsort(void *arr, size_t n, size_t size, 
+	int (*compar)(const void *, const void *)) 
 {
-	int i, j;
-	char k;
+	u_char *a = arr;
+	u_char *ai, *s, *t, *u, tmp;
+	int i;
 
-	for (i = 0; i < nmemb; i++) {
-		for (j = i + 1; j < nmemb; j++) {
-			if (v[j] < v[i]) {
-				k = v[i];
-				v[i] = v[j];
-				v[j] = k;
-			}
+	for (ai = a + size; --n >= 1; ai += size)
+		for (t = ai; t > a; t -= size) {
+			u = t - size;
+			if (compar(u, t) <= 0) break;
+			swap(u, t);
 		}
-	}
 }
 
 /* Some random data */

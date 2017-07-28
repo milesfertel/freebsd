@@ -33,10 +33,10 @@ __FBSDID("$FreeBSD: head/lib/libc/tests/stdlib/mergesort_test.c 290538 2015-11-0
 
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "stdlib/wiki.c"
 #include "test-sort.h"
 
 #define ELT_MAX 16
@@ -47,12 +47,23 @@ __FBSDID("$FreeBSD: head/lib/libc/tests/stdlib/mergesort_test.c 290538 2015-11-0
  */
 #define KEYS 50
 /*
- * Definitions for sizeable_WikiSort_test
- * Test from 2^BASE to 2^MAX elements of type SORT_TYPE
+ * Definitions for sizeable_mergesort_test
+ * Test from 2^BASE_EXP to 2^MAX_EXP elements of type SORT_TYPE
  */
-#define BASE 10
-#define MAX  27
+#define BASE_EXP 10
+#define MAX_EXP  15
 #define SORT_TYPE int
+
+// Number of chars in the odd elt subarray
+#define NCHARS 5
+
+#define check_array_eq(it, len, expected, actual) do { \
+    for (it = 0; it < len; it++) \
+        ATF_CHECK_MSG( \
+            actual[it] == expected[it], \
+            "item at index %d didn't match: %d != %d", \
+            it, actual[it], expected[it]); \
+} while(0)
 
 /*
  * Structures to allow for the creation of predefined variable sized arrays.
@@ -85,23 +96,23 @@ ATF_TC_BODY(trivial_mergesort_test, tc)
 	int sresvector[ELT_MAX];
 	int testvector[ELT_MAX];
 	int num_tests = nitems(testarrays);
+	int i, j, len;
+	size_t size;
 
-	for (int i = 0; i < num_tests; i++) {
-		int len = testarrays[i].len;
+	for (i = 0; i < num_tests; i++) {
+		len = testarrays[i].len;
+		size = len * sizeof(testvector[0]);
 
 		/* Populate test vectors */
-		memcpy(testvector, testarrays[i].elts, len);
-		memcpy(sresvector, testarrays[i].elts, len);
+		memcpy(testvector, testarrays[i].elts, size);
+		memcpy(sresvector, testarrays[i].elts, size);
 
-		/* Sort using WikiSort */
-		WikiSort(testvector, len, sizeof(testvector[0]), sorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, len, sizeof(testvector[0]), sorthelp);
 		/* Sort using reference slow sorting routine */
-		ssort(sresvector, len);
+		insertionsort(sresvector, len, sizeof(sresvector[0]), sorthelp);
 
-		for (int k = 0; k < len; k++)
-			ATF_CHECK_MSG(testvector[k] == sresvector[k],
-			    "item at index %d didn't match: %d != %d",
-			    k, testvector[k], sresvector[k]);
+		check_array_eq(j, len, testvector, sresvector);
 	}
 }
 
@@ -124,23 +135,23 @@ ATF_TC_BODY(ordering_mergesort_test, tc)
 	int sresvector[ELT_MAX];
 	int testvector[ELT_MAX];
 	int num_tests = nitems(testarrays);
+	int i, j, len;
+	size_t size;
 
-	for (int i = 0; i < num_tests; i++) {
-		int len = testarrays[i].len;
+	for (i = 0; i < num_tests; i++) {
+		len = testarrays[i].len;
+		size = len * sizeof(testvector[0]);
 
 		/* Populate test vectors */
-		memcpy(testvector, testarrays[i].elts, len);
-		memcpy(sresvector, testarrays[i].elts, len);
+		memcpy(testvector, testarrays[i].elts, size);
+		memcpy(sresvector, testarrays[i].elts, size);
 
-		/* Sort using WikiSort */
-		WikiSort(testvector, len, sizeof(testvector[0]), sorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, len, sizeof(testvector[0]), sorthelp);
 		/* Sort using reference slow sorting routine */
-		ssort(sresvector, len);
+		insertionsort(sresvector, len, sizeof(sresvector[0]), sorthelp);
 
-		for (int k = 0; k < len; k++)
-			ATF_CHECK_MSG(testvector[k] == sresvector[k],
-			    "item at index %d didn't match: %d != %d",
-			    k, testvector[k], sresvector[k]);
+		check_array_eq(j, len, testvector, sresvector);
 	}
 }
 
@@ -158,23 +169,23 @@ ATF_TC_BODY(misc_mergesort_test, tc)
 	int sresvector[ELT_MAX];
 	int testvector[ELT_MAX];
 	int num_tests = nitems(testarrays);
+	int i, j, len;
+	size_t size;
 
-	for (int i = 0; i < num_tests; i++) {
-		int len = testarrays[i].len;
+	for (i = 0; i < num_tests; i++) {
+		len = testarrays[i].len;
+		size = len * sizeof(testvector[0]);
 
 		/* Populate test vectors */
-		memcpy(testvector, testarrays[i].elts, len);
-		memcpy(sresvector, testarrays[i].elts, len);
+		memcpy(testvector, testarrays[i].elts, size);
+		memcpy(sresvector, testarrays[i].elts, size);
 
-		/* Sort using WikiSort */
-		WikiSort(testvector, len, sizeof(testvector[0]), sorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, len, sizeof(testvector[0]), sorthelp);
 		/* Sort using reference slow sorting routine */
-		ssort(sresvector, len);
+		insertionsort(sresvector, len, sizeof(sresvector[0]), sorthelp);
 
-		for (int j = 0; j < len; k++)
-			ATF_CHECK_MSG(testvector[j] == sresvector[j],
-			    "item at index %d didn't match: %d != %d",
-			    j, testvector[j], sresvector[j]);
+		check_array_eq(j, len, testvector, sresvector);
 	}
 }
 
@@ -187,22 +198,21 @@ ATF_TC_BODY(rand_mergesort_test, tc)
 	int sresvector[IVEC_LEN];
 	int testvector[IVEC_LEN];
 	int i, j;
+	size_t size;
 
 	for (j = 2; j < IVEC_LEN; j++) {
+		size = j * sizeof(testvector[0]);
 		/* Populate test vectors */
-		memcpy(testvector, initvector, j);
-		memcpy(sresvector, initvector, j);
+		memcpy(testvector, initvector, size);
+		memcpy(sresvector, initvector, size);
 
-		/* Sort using WikiSort */
-		WikiSort(testvector, j, sizeof(testvector[0]), sorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, j, sizeof(testvector[0]), sorthelp);
 		/* Sort using reference slow sorting routine */
-		ssort(sresvector, j);
+		insertionsort(sresvector, j, sizeof(sresvector[0]), sorthelp);
 
 		/* Compare results */
-		for (i = 0; i < j; i++)
-			ATF_CHECK_MSG(testvector[i] == sresvector[i],
-			    "item at index %d didn't match: %d != %d",
-			    i, testvector[i], sresvector[i]);
+		check_array_eq(i, j, testvector, sresvector);
 	}
 }
 
@@ -242,32 +252,37 @@ ATF_TC_BODY(small_elt_mergesort_test, tc)
 	char sresvector[ELT_MAX];
 	char testvector[ELT_MAX];
 	int num_tests = nitems(testarrays);
-
-	for (int i = 0; i < num_tests; i++) {
-		int len = testarrays[i].len;
+	int i, j, len, ret;
+	size_t size;
+	for (i = 0; i < num_tests; i++) {
+		len = testarrays[i].len;
+		size = len * sizeof(testvector[0]);
 		/* Populate test vectors */
-		memcpy(testvector, testarrays[i].elts, len);
-		memcpy(sresvector, testarrays[i].elts, len);
+		memcpy(testvector, testarrays[i].elts, size);
+		memcpy(sresvector, testarrays[i].elts, size);
 
-		/* Sort using WikiSort */
-		WikiSort(testvector, len, sizeof(testvector[0]), csorthelp);
+		atf_tc_expect_fail(
+		    "Mergesort implementation does not support arguments less "
+		    "than sizeof(void *)/2");
+		/* Sort using mergesort(3) */
+		ret = mergesort(testvector, len, sizeof(testvector[0]),
+		    csorthelp);
+		ATF_CHECK(ret == 0);
 		/* Sort using reference slow sorting routine */
-		scsort(sresvector, len);
+		insertionsort(sresvector, len, sizeof(sresvector[0]),
+		    csorthelp);
 
-		for (int j = 0; j < len; j++)
-			ATF_CHECK_MSG(testvector[j] == sresvector[j],
-			    "item at index %d didn't match: %d != %d",
-			    j, testvector[j], sresvector[j]);
-}
+		/* Compare results */
+		check_array_eq(j, len, testvector, sresvector);
+	}
 }
 
 /*
  * Sort an array of char[5] arrays. Tests for possible alignment issues.
  */
-ATF_TC_WITHOUT_HEAD(oddelt_WikiSort_test);
-ATF_TC_BODY(oddelt_WikiSort_test, tc)
+ATF_TC_WITHOUT_HEAD(oddelt_mergesort_test);
+ATF_TC_BODY(oddelt_mergesort_test, tc)
 {
-#define NCHARS 5
 	struct odd_array {
 		int len;
 		char elts[ELT_MAX][NCHARS];
@@ -294,34 +309,31 @@ ATF_TC_BODY(oddelt_WikiSort_test, tc)
 	char sresvector[ELT_MAX][NCHARS];
 	char testvector[ELT_MAX][NCHARS];
 	int num_tests = nitems(testarrays);
+	int i, j, k, len;
 
-	for (int i = 0; i < num_tests; i++) {
-		int len = testarrays[i].len;
+	for (i = 0; i < num_tests; i++) {
+		len = testarrays[i].len;
 		/* Populate test vectors */
-		for (int j = 0; j < len; j++) {
-			for (int k = 0; k < NCHARS; k++)
+		for (j = 0; j < len; j++) {
+			for (k = 0; k < NCHARS; k++)
 				testvector[j][k] = sresvector[j][k] =
 				    testarrays[i].elts[j][k];
 		}
-		/* Sort using WikiSort */
-		WikiSort(testvector, len, sizeof(testvector[0]), oddsorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, len, sizeof(testvector[0]), oddsorthelp);
 		/* Sort using reference slow sorting routine */
-		mergesort(sresvector, len, sizeof(sresvector[0]), oddsorthelp);
-		for (int j = 0; j < len; j++)
-			for (int k = 0; k < NCHARS; k++) {
-				ATF_CHECK_MSG(testvector[j][k] !=
-				    sresvector[j][k],
-				    "item at index %d didn't match: %d != %d\n",
-				    j, testvector[j][k], sresvector[j][k]);
-			}
+		insertionsort(sresvector, len, sizeof(sresvector[0]),
+		    oddsorthelp);
+		for (j = 0; j < len; j++)
+			check_array_eq(k, NCHARS, testvector[j], sresvector[j]);
 	}
 }
 
 /*
  * Sort an array of int*'s
  */
-ATF_TC_WITHOUT_HEAD(pointer_WikiSort_test);
-ATF_TC_BODY(pointer_WikiSort_test, tc)
+ATF_TC_WITHOUT_HEAD(pointer_mergesort_test);
+ATF_TC_BODY(pointer_mergesort_test, tc)
 {
 	struct ptr_array {
 		int len;
@@ -339,29 +351,30 @@ ATF_TC_BODY(pointer_WikiSort_test, tc)
 	int *sresvector[ELT_MAX];
 	int *testvector[ELT_MAX];
 	int num_tests = nitems(testarrays);
-
-	for (int i = 0; i < num_tests; i++) {
-		int len = testarrays[i].len;
+	int i, j, len;
+	for (i = 0; i < num_tests; i++) {
+		len = testarrays[i].len;
 		/* Populate test vectors */
-		for (int j = 0; j < len; j++)
+		for (j = 0; j < len; j++)
 			testvector[j] = sresvector[j] = testarrays[i].elts[j];
-		/* Sort using WikiSort */
-		WikiSort(testvector, len, sizeof(testvector[0]), ptrsorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, len, sizeof(testvector[0]), ptrsorthelp);
 		/* Reference sort */
-		mergesort(sresvector, len, sizeof(testvector[0]), ptrsorthelp);
+		insertionsort(sresvector, len, sizeof(testvector[0]),
+		    ptrsorthelp);
 
-		for (int k = 0; k < len; k++)
-			ATF_CHECK_MSG(testvector[k] != sresvector[k],
+		for (j = 0; j < len; j++)
+			ATF_CHECK_MSG(testvector[j] == sresvector[j],
 			    "item at index %d didn't match: %p != %p\n",
-			    k, testvector[k], sresvector[k]);
+			    j, testvector[j], sresvector[j]);
 	}
 }
 
 /*
  * Sort an array of random int*'s
  */
-ATF_TC_WITHOUT_HEAD(rand_pointer_WikiSort_test);
-ATF_TC_BODY(rand_pointer_WikiSort_test, tc)
+ATF_TC_WITHOUT_HEAD(rand_pointer_mergesort_test);
+ATF_TC_BODY(rand_pointer_mergesort_test, tc)
 {
 	int *rand_sresvector[IVEC_LEN];
 	int *rand_testvector[IVEC_LEN];
@@ -371,18 +384,18 @@ ATF_TC_BODY(rand_pointer_WikiSort_test, tc)
 		/* Populate test vectors */
 		for (i = 0; i < j; i++)
 			rand_testvector[i] = rand_sresvector[i] =
-			    &(initvector[rand() % IVEC_LEN]);
+			    &(initvector[arc4random() % IVEC_LEN]);
 
-		/* Sort using WikiSort */
-		WikiSort(rand_testvector, j, sizeof(rand_testvector[0]),
+		/* Sort using mergesort(3) */
+		mergesort(rand_testvector, j, sizeof(rand_testvector[0]),
 		    ptrsorthelp);
 		/* Reference sort */
-		mergesort(rand_sresvector, j, sizeof(rand_sresvector[0]),
+		insertionsort(rand_sresvector, j, sizeof(rand_sresvector[0]),
 		    ptrsorthelp);
 
 		/* Compare results */
 		for (i = 0; i < j; i++)
-			ATF_CHECK_MSG(rand_testvector[i] != rand_sresvector[i],
+			ATF_CHECK_MSG(rand_testvector[i] == rand_sresvector[i],
 			    "item at index %d didn't match: %p != %p\n",
 			    i, rand_testvector[i], rand_sresvector[i]);
 	}
@@ -391,8 +404,8 @@ ATF_TC_BODY(rand_pointer_WikiSort_test, tc)
 /*
  * Sort an array of nontrivially large structs
  */
-ATF_TC_WITHOUT_HEAD(bigstruct_WikiSort_test);
-ATF_TC_BODY(bigstruct_WikiSort_test, tc)
+ATF_TC_WITHOUT_HEAD(bigstruct_mergesort_test);
+ATF_TC_BODY(bigstruct_mergesort_test, tc)
 {
 	struct big sresvector[IVEC_LEN];
 	struct big testvector[IVEC_LEN];
@@ -404,14 +417,15 @@ ATF_TC_BODY(bigstruct_WikiSort_test, tc)
 			testvector[i].value = sresvector[i].value =
 			    initvector[i];
 
-		/* Sort using WikiSort */
-		WikiSort(testvector, j, sizeof(testvector[0]), bigsorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, j, sizeof(testvector[0]), bigsorthelp);
 		/* Reference sort */
-		mergesort(sresvector, j, sizeof(testvector[0]), bigsorthelp);
+		insertionsort(sresvector, j, sizeof(sresvector[0]),
+		    bigsorthelp);
 
 		/* Compare results */
 		for (i = 0; i < j; i++)
-			ATF_CHECK_MSG(testvector[i].value !=
+			ATF_CHECK_MSG(testvector[i].value ==
 			    sresvector[i].value,
 			    "item at index %d didn't match: %d != %d\n",
 			    i, testvector[i].value, sresvector[i].value);
@@ -423,8 +437,8 @@ ATF_TC_BODY(bigstruct_WikiSort_test, tc)
  * to check for stability. The sorted elements with the same value should
  * be in the same order by key.
  */
-ATF_TC_WITHOUT_HEAD(stability_WikiSort_test);
-ATF_TC_BODY(stability_WikiSort_test, tc)
+ATF_TC_WITHOUT_HEAD(stability_mergesort_test);
+ATF_TC_BODY(stability_mergesort_test, tc)
 {
 	struct stable sresvector[IVEC_LEN];
 	struct stable testvector[IVEC_LEN];
@@ -433,22 +447,23 @@ ATF_TC_BODY(stability_WikiSort_test, tc)
 	for (j = 2; j < IVEC_LEN; j++) {
 		/* Populate test vectors */
 		for (i = 0; i < j; i++) {
-			int value = rand() % KEYS;
+			int value = arc4random() % KEYS;
 			testvector[i].value = sresvector[i].value = value;
 			testvector[i].key = sresvector[i].key = keys[value];
 			keys[value]++;
 		}
 
-		/* Sort using WikiSort */
-		WikiSort(testvector, j, sizeof(testvector[0]), stablesorthelp);
+		/* Sort using mergesort(3) */
+		mergesort(testvector, j, sizeof(testvector[0]), stablesorthelp);
 		/* Reference sort */
-		mergesort(sresvector, j, sizeof(testvector[0]), stablesorthelp);
+		insertionsort(sresvector, j, sizeof(sresvector[0]),
+		    stablesorthelp);
 
 		/* Compare results */
 		for (i = 0; i < j; i++) {
-			ATF_CHECK_MSG(testvector[i].value !=
-			    sresvector[i].value ||
-			    testvector[i].key != sresvector[i].key,
+			ATF_CHECK_MSG(testvector[i].value ==
+			    sresvector[i].value &&
+			    testvector[i].key == sresvector[i].key,
 			    "item at index %d didn't match: value %d "
 			    "!= %d or key %d != %d\n",
 			    i, testvector[i].value, sresvector[i].value,
@@ -458,30 +473,22 @@ ATF_TC_BODY(stability_WikiSort_test, tc)
 }
 
 static void
-check(SORT_TYPE *array1, SORT_TYPE *array2, int elts)
-{
-	for (int k = 0; k < elts; k++)
-		ATF_CHECK_MSG(array1[k] == array2[k],
-		    "item at index %d didn't match: %d != %d",
-		    k, array1[k],array2[k]);
-}
-
-static void
 rand_test(int elts)
 {
-	SORT_TYPE *testvector = malloc(sizeof(SORT_TYPE) * elts);
-	SORT_TYPE *sresvector = malloc(sizeof(SORT_TYPE) * elts);
+	int i;
+	size_t size = sizeof(SORT_TYPE) * elts;
+	SORT_TYPE *testvector = malloc(size);
+	SORT_TYPE *sresvector = malloc(size);
 
-	for (int i = 0; i < elts; i++) {
-		testvector[i] = sresvector[i] = rand();
-	}
+	arc4random_buf(testvector, size);
+	memcpy(sresvector, testvector, size);
 
-	/* Sort using WikiSort */
-	WikiSort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
-	/* Sort using reference sorting routine */
+	/* Sort using mergesort(3) */
 	mergesort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
+	/* Sort using reference sorting routine */
+	insertionsort(sresvector, elts, sizeof(SORT_TYPE), sorthelp);
 
-	check(testvector, sresvector, elts);
+	check_array_eq(i, elts, testvector, sresvector);
 
 	free(testvector);
 	free(sresvector);
@@ -490,19 +497,21 @@ rand_test(int elts)
 static void
 sort_test(int elts)
 {
-	SORT_TYPE *testvector = malloc(sizeof(SORT_TYPE) * elts);
-	SORT_TYPE *sresvector = malloc(sizeof(SORT_TYPE) * elts);
+	int i;
+	size_t size = sizeof(SORT_TYPE) * elts;
+	SORT_TYPE *testvector = malloc(size);
+	SORT_TYPE *sresvector = malloc(size);
 
-	for (int i = 0; i < elts; i++) {
+	for (i = 0; i < elts; i++) {
 		testvector[i] = sresvector[i] = i;
 	}
 
-	/* Sort using WikiSort */
-	WikiSort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
-	/* Sort using reference sorting routine */
+	/* Sort using mergesort(3) */
 	mergesort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
+	/* Sort using reference sorting routine */
+	insertionsort(sresvector, elts, sizeof(SORT_TYPE), sorthelp);
 
-	check(testvector, sresvector, elts);
+	check_array_eq(i, elts, testvector, sresvector);
 
 	free(testvector);
 	free(sresvector);
@@ -511,22 +520,24 @@ sort_test(int elts)
 static void
 partial_test(int elts)
 {
-	SORT_TYPE *testvector = malloc(sizeof(SORT_TYPE) * elts);
-	SORT_TYPE *sresvector = malloc(sizeof(SORT_TYPE) * elts);
+	int i;
+	size_t size = sizeof(SORT_TYPE) * elts;
+	SORT_TYPE *testvector = malloc(size);
+	SORT_TYPE *sresvector = malloc(size);
 
-	for (int i = 0; i < elts; i++) {
+	for (i = 0; i < elts; i++) {
 		if (i <= elts / 2)
 			testvector[i] = sresvector[i] = i;
 		else
-			testvector[i] = sresvector[i] = rand();
+			testvector[i] = sresvector[i] = arc4random();
 	}
 
-	/* Sort using WikiSort */
-	WikiSort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
-	/* Sort using reference sorting routine */
+	/* Sort using mergesort(3) */
 	mergesort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
+	/* Sort using reference sorting routine */
+	insertionsort(sresvector, elts, sizeof(SORT_TYPE), sorthelp);
 
-	check(testvector, sresvector, elts);
+	check_array_eq(i, elts, testvector, sresvector);
 
 	free(testvector);
 	free(sresvector);
@@ -535,32 +546,34 @@ partial_test(int elts)
 static void
 reverse_test(int elts)
 {
-	SORT_TYPE *testvector = malloc(sizeof(SORT_TYPE) * elts);
-	SORT_TYPE *sresvector = malloc(sizeof(SORT_TYPE) * elts);
+	int i;
+	size_t size = sizeof(SORT_TYPE) * elts;
+	SORT_TYPE *testvector = malloc(size);
+	SORT_TYPE *sresvector = malloc(size);
 
-	for (int i = 0; i < elts; i++) {
+	for (i = 0; i < elts; i++) {
 		testvector[i] = sresvector[i] = elts - i;
 	}
 
-	/* Sort using WikiSort */
-	WikiSort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
-	/* Sort using reference sorting routine */
+	/* Sort using mergesort(3) */
 	mergesort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
+	/* Sort using reference sorting routine */
+	insertionsort(sresvector, elts, sizeof(SORT_TYPE), sorthelp);
 
-	check(testvector, sresvector, elts);
+	check_array_eq(i, elts, testvector, sresvector);
 
 	free(testvector);
 	free(sresvector);
 }
 
 /*
- * Sort an array of integers from 2^BASE to 2^MAX elements
+ * Sort an array of integers from 2^BASE_EXP to 2^MAX_EXP elements
  */
-ATF_TC_WITHOUT_HEAD(sizeable_WikiSort_test);
-ATF_TC_BODY(sizeable_WikiSort_test, tc)
+ATF_TC_WITHOUT_HEAD(sizeable_mergesort_test);
+ATF_TC_BODY(sizeable_mergesort_test, tc)
 {
-	int max = pow(2, MAX);
-	int base = pow(2, BASE);
+	int max = pow(2, MAX_EXP);
+	int base = pow(2, BASE_EXP);
 	for (int elts = base; elts < max; elts *= 2) {
 		rand_test(elts);
 		sort_test(elts);
@@ -580,12 +593,12 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, misc_mergesort_test);
 	ATF_TP_ADD_TC(tp, rand_mergesort_test);
 	ATF_TP_ADD_TC(tp, small_elt_mergesort_test);
-	ATF_TP_ADD_TC(tp, oddelt_WikiSort_test);
-	ATF_TP_ADD_TC(tp, pointer_WikiSort_test);
-	ATF_TP_ADD_TC(tp, rand_pointer_WikiSort_test);
-	ATF_TP_ADD_TC(tp, bigstruct_WikiSort_test);
-	ATF_TP_ADD_TC(tp, stability_WikiSort_test);
-	ATF_TP_ADD_TC(tp, sizeable_WikiSort_test);
+	ATF_TP_ADD_TC(tp, oddelt_mergesort_test);
+	ATF_TP_ADD_TC(tp, pointer_mergesort_test);
+	ATF_TP_ADD_TC(tp, rand_pointer_mergesort_test);
+	ATF_TP_ADD_TC(tp, bigstruct_mergesort_test);
+	ATF_TP_ADD_TC(tp, stability_mergesort_test);
+	ATF_TP_ADD_TC(tp, sizeable_mergesort_test);
 
 	return (atf_no_error());
 }
