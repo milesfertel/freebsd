@@ -9,7 +9,10 @@
 #include "stdlib/wiki.c"
 #endif
 
-int
+/*
+ * Integer comparison function for stdlib sorting algorithms
+ */
+static int
 sorthelp(const void *a, const void *b)
 {
 	if (*(int *)a > *(int *)b)
@@ -21,9 +24,20 @@ sorthelp(const void *a, const void *b)
 
 #define NARGS 5
 
+/*
+ * Enumerated types for the different types of tests and sorting algorithms
+ */
 enum test { RAND, SORT, PART, REV, INVALID_TEST };
-enum sort { MERGE, WIKI, QUICK, HEAP, INVALID_ALG };
 
+#ifdef WIKI
+enum sort { MERGE, WIKI, QUICK, HEAP, INVALID_ALG };
+#else
+enum sort { MERGE, QUICK, HEAP, INVALID_ALG };
+#endif
+
+/*
+ * Sort an array with the given algorithm
+ */
 static void
 sort(int *testarray, int elts, enum sort s)
 {
@@ -42,9 +56,15 @@ sort(int *testarray, int elts, enum sort s)
 	case HEAP:
 		heapsort(testarray, (size_t)elts, sizeof(int), sorthelp);
 		break;
+	// Should never be reached
+	case INVALID_ALG:
+		exit(EX_DATAERR);
 	}
 }
 
+/*
+ * Sort an array of randomly generated integers
+ */
 static void
 rand_bench(int elts, enum sort s)
 {
@@ -55,6 +75,9 @@ rand_bench(int elts, enum sort s)
 	free(array);
 }
 
+/*
+ * Sort an array of increasing integers
+ */
 static void
 sort_bench(int elts, enum sort s)
 {
@@ -67,6 +90,9 @@ sort_bench(int elts, enum sort s)
 	free(array);
 }
 
+/*
+ * Sort an array of partially increasing, partially random integers
+ */
 static void
 partial_bench(int elts, enum sort s)
 {
@@ -76,12 +102,15 @@ partial_bench(int elts, enum sort s)
 		if (i <= elts / 2)
 			array[i] = i;
 		else
-			array[i] = rand();
+			array[i] = arc4random();
 	}
 	sort(array, elts, s);
 	free(array);
 }
 
+/*
+ * Sort an array of decreasing integers
+ */
 static void
 reverse_bench(int elts, enum sort s)
 {
@@ -111,6 +140,9 @@ run_bench(enum sort s, enum test t, int runs, int elts)
 		case REV:
 			reverse_bench(elts, s);
 			break;
+		// Should never be reached
+		case INVALID_TEST:
+			exit(EX_DATAERR);
 		}
 	}
 }
@@ -166,6 +198,7 @@ usage(const char *progname)
 	printf("\tpart: Partially ordered array\n");
 	printf("\trev: Decreasing order array\n");
 	printf("Run the algorithm [runs] times with 2^[elt_power] elements\n");
+	exit(EX_USAGE);
 }
 
 /*
@@ -177,21 +210,17 @@ main(int argc, char *argv[])
 {
 	const char *progname = argv[0];
 	int runs, elts;
-	if (argc != NARGS) {
+	if (argc != NARGS)
 		usage(progname);
-		exit(EX_USAGE);
-	}
 
 	enum sort s = parse_alg(argv[1]);
-	if (s == INVALID_ALG) {
+	if (s == INVALID_ALG)
 		usage(progname);
-		exit(EX_USAGE);
-	}
+
 	enum test t = parse_test(argv[2]);
-	if (t == INVALID_TEST) {
+	if (t == INVALID_TEST)
 		usage(progname);
-		exit(EX_USAGE);
-	}
+
 	runs = atoi(argv[3]);
 	elts = pow(2, atoi(argv[4]));
 
