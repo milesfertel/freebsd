@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD: head/lib/libc/tests/stdlib/mergesort_test.c 290538 2015-11-0
  * Test from 2^BASE_EXP to 2^MAX_EXP elements of type SORT_TYPE
  */
 #define BASE_EXP 10
-#define MAX_EXP  15
+#define MAX_EXP  18
 #define SORT_TYPE int
 
 // Number of chars in the odd elt subarray
