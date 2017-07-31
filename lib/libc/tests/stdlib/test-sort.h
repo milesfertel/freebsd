@@ -33,6 +33,9 @@
 
 #include <atf-c.h>
 
+// Number of ints in the bigstruct array
+#define SPACE_LEN 100
+
 /*
  * Integer comparison function for stdlib sorting algorithms
  */
@@ -111,7 +114,7 @@ ptrsorthelp(const void *a, const void *b)
  */
 struct big {
 	int value;
-	int spacetaker[100];
+	int spacetaker[SPACE_LEN];
 };
 
 /*

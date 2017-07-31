@@ -57,6 +57,9 @@ __FBSDID("$FreeBSD: head/lib/libc/tests/stdlib/mergesort_test.c 290538 2015-11-0
 // Number of chars in the odd elt subarray
 #define NCHARS 5
 
+// Canary value to verify buffer is intact
+#define CANARY 0XDEADBEEF
+
 #define check_array_eq(it, len, expected, actual) do { \
     for (it = 0; it < len; it++) \
         ATF_CHECK_MSG( \
@@ -410,12 +413,16 @@ ATF_TC_BODY(bigstruct_mergesort_test, tc)
 	struct big sresvector[IVEC_LEN];
 	struct big testvector[IVEC_LEN];
 	int i, j;
+	size_t size = SPACE_LEN * sizeof(int);
 
 	for (j = 2; j < IVEC_LEN; j++) {
 		/* Populate test vectors */
-		for (i = 0; i < j; i++)
+		for (i = 0; i < j; i++) {
 			testvector[i].value = sresvector[i].value =
 			    initvector[i];
+			memset(testvector[i].spacetaker, CANARY, size);
+			memset(sresvector[i].spacetaker, CANARY, size);
+		}
 
 		/* Sort using mergesort(3) */
 		mergesort(testvector, j, sizeof(testvector[0]), bigsorthelp);
@@ -424,11 +431,15 @@ ATF_TC_BODY(bigstruct_mergesort_test, tc)
 		    bigsorthelp);
 
 		/* Compare results */
-		for (i = 0; i < j; i++)
+		for (i = 0; i < j; i++) {
 			ATF_CHECK_MSG(testvector[i].value ==
 			    sresvector[i].value,
 			    "item at index %d didn't match: %d != %d\n",
 			    i, testvector[i].value, sresvector[i].value);
+			ATF_CHECK_MSG(memcmp(testvector[i].spacetaker,
+			    sresvector[i].spacetaker, size) == 0,
+			    "Spacetaker corrupted at index %d\n", i);
+		}
 	}
 }
 
