@@ -137,32 +137,6 @@ bigsorthelp(const void *a, const void *b)
 	return (0);
 }
 
-/*
- * Struct used to test stdlib sorting algorithms ability to sort data with
- * stability
- */
-struct stable {
-	int key;
-	int value;
-};
-
-/*
- * Struct stable comparison function for stdlib sorting algorithms
- */
-static int
-stablesorthelp(const void *a, const void *b)
-{
-	const struct stable *oa, *ob;
-	oa = a;
-	ob = b;
-	/* Don't use "return *oa - *ob" since it's easy to cause overflow! */
-	if (oa->value > ob->value)
-		return (1);
-	if (oa->value < ob->value)
-		return (-1);
-	return (0);
-}
-
 #define swap(a, b)                  \
 	{                           \
 		s = b;              \

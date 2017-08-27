@@ -193,33 +193,6 @@ ATF_TC_BODY(misc_mergesort_test, tc)
 }
 
 /*
- * Sort an array of random integers.
- */
-ATF_TC_WITHOUT_HEAD(rand_mergesort_test);
-ATF_TC_BODY(rand_mergesort_test, tc)
-{
-	int sresvector[IVEC_LEN];
-	int testvector[IVEC_LEN];
-	int i, j;
-	size_t size;
-
-	for (j = 2; j < IVEC_LEN; j++) {
-		size = j * sizeof(testvector[0]);
-		/* Populate test vectors */
-		memcpy(testvector, initvector, size);
-		memcpy(sresvector, initvector, size);
-
-		/* Sort using mergesort(3) */
-		mergesort(testvector, j, sizeof(testvector[0]), sorthelp);
-		/* Sort using reference slow sorting routine */
-		insertionsort(sresvector, j, sizeof(sresvector[0]), sorthelp);
-
-		/* Compare results */
-		check_array_eq(i, j, testvector, sresvector);
-	}
-}
-
-/*
  * Sort an array of chars
  */
 ATF_TC_WITHOUT_HEAD(small_elt_mergesort_test);
@@ -373,36 +346,6 @@ ATF_TC_BODY(pointer_mergesort_test, tc)
 	}
 }
 
-/*
- * Sort an array of random int*'s
- */
-ATF_TC_WITHOUT_HEAD(rand_pointer_mergesort_test);
-ATF_TC_BODY(rand_pointer_mergesort_test, tc)
-{
-	int *rand_sresvector[IVEC_LEN];
-	int *rand_testvector[IVEC_LEN];
-	int i, j;
-
-	for (j = 2; j < IVEC_LEN; j++) {
-		/* Populate test vectors */
-		for (i = 0; i < j; i++)
-			rand_testvector[i] = rand_sresvector[i] =
-			    &(initvector[arc4random() % IVEC_LEN]);
-
-		/* Sort using mergesort(3) */
-		mergesort(rand_testvector, j, sizeof(rand_testvector[0]),
-		    ptrsorthelp);
-		/* Reference sort */
-		insertionsort(rand_sresvector, j, sizeof(rand_sresvector[0]),
-		    ptrsorthelp);
-
-		/* Compare results */
-		for (i = 0; i < j; i++)
-			ATF_CHECK_MSG(rand_testvector[i] == rand_sresvector[i],
-			    "item at index %d didn't match: %p != %p\n",
-			    i, rand_testvector[i], rand_sresvector[i]);
-	}
-}
 
 /*
  * Sort an array of nontrivially large structs
@@ -443,67 +386,7 @@ ATF_TC_BODY(bigstruct_mergesort_test, tc)
 	}
 }
 
-/*
- * Sort an array of structs with identical values but different keys in order
- * to check for stability. The sorted elements with the same value should
- * be in the same order by key.
- */
-ATF_TC_WITHOUT_HEAD(stability_mergesort_test);
-ATF_TC_BODY(stability_mergesort_test, tc)
-{
-	struct stable sresvector[IVEC_LEN];
-	struct stable testvector[IVEC_LEN];
-	int i, j;
-	int keys[KEYS] = {0};
-	for (j = 2; j < IVEC_LEN; j++) {
-		/* Populate test vectors */
-		for (i = 0; i < j; i++) {
-			int value = arc4random() % KEYS;
-			testvector[i].value = sresvector[i].value = value;
-			testvector[i].key = sresvector[i].key = keys[value];
-			keys[value]++;
-		}
 
-		/* Sort using mergesort(3) */
-		mergesort(testvector, j, sizeof(testvector[0]), stablesorthelp);
-		/* Reference sort */
-		insertionsort(sresvector, j, sizeof(sresvector[0]),
-		    stablesorthelp);
-
-		/* Compare results */
-		for (i = 0; i < j; i++) {
-			ATF_CHECK_MSG(testvector[i].value ==
-			    sresvector[i].value &&
-			    testvector[i].key == sresvector[i].key,
-			    "item at index %d didn't match: value %d "
-			    "!= %d or key %d != %d\n",
-			    i, testvector[i].value, sresvector[i].value,
-			    testvector[i].key, sresvector[i].key);
-		}
-	}
-}
-
-static void
-rand_test(int elts)
-{
-	int i;
-	size_t size = sizeof(SORT_TYPE) * elts;
-	SORT_TYPE *testvector = malloc(size);
-	SORT_TYPE *sresvector = malloc(size);
-
-	arc4random_buf(testvector, size);
-	memcpy(sresvector, testvector, size);
-
-	/* Sort using mergesort(3) */
-	mergesort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
-	/* Sort using reference sorting routine */
-	insertionsort(sresvector, elts, sizeof(SORT_TYPE), sorthelp);
-
-	check_array_eq(i, elts, testvector, sresvector);
-
-	free(testvector);
-	free(sresvector);
-}
 
 static void
 sort_test(int elts)
@@ -515,32 +398,6 @@ sort_test(int elts)
 
 	for (i = 0; i < elts; i++) {
 		testvector[i] = sresvector[i] = i;
-	}
-
-	/* Sort using mergesort(3) */
-	mergesort(testvector, elts, sizeof(SORT_TYPE), sorthelp);
-	/* Sort using reference sorting routine */
-	insertionsort(sresvector, elts, sizeof(SORT_TYPE), sorthelp);
-
-	check_array_eq(i, elts, testvector, sresvector);
-
-	free(testvector);
-	free(sresvector);
-}
-
-static void
-partial_test(int elts)
-{
-	int i;
-	size_t size = sizeof(SORT_TYPE) * elts;
-	SORT_TYPE *testvector = malloc(size);
-	SORT_TYPE *sresvector = malloc(size);
-
-	for (i = 0; i < elts; i++) {
-		if (i <= elts / 2)
-			testvector[i] = sresvector[i] = i;
-		else
-			testvector[i] = sresvector[i] = arc4random();
 	}
 
 	/* Sort using mergesort(3) */
@@ -586,9 +443,7 @@ ATF_TC_BODY(sizeable_mergesort_test, tc)
 	int max = pow(2, MAX_EXP);
 	int base = pow(2, BASE_EXP);
 	for (int elts = base; elts < max; elts *= 2) {
-		rand_test(elts);
 		sort_test(elts);
-		partial_test(elts);
 		reverse_test(elts);
 	}
 }
@@ -602,13 +457,10 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, trivial_mergesort_test);
 	ATF_TP_ADD_TC(tp, ordering_mergesort_test);
 	ATF_TP_ADD_TC(tp, misc_mergesort_test);
-	ATF_TP_ADD_TC(tp, rand_mergesort_test);
 	ATF_TP_ADD_TC(tp, small_elt_mergesort_test);
 	ATF_TP_ADD_TC(tp, oddelt_mergesort_test);
 	ATF_TP_ADD_TC(tp, pointer_mergesort_test);
-	ATF_TP_ADD_TC(tp, rand_pointer_mergesort_test);
 	ATF_TP_ADD_TC(tp, bigstruct_mergesort_test);
-	ATF_TP_ADD_TC(tp, stability_mergesort_test);
 	ATF_TP_ADD_TC(tp, sizeable_mergesort_test);
 
 	return (atf_no_error());
