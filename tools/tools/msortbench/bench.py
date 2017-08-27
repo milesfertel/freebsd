@@ -1,7 +1,8 @@
+#!/usr/bin/env python
+
 from time import time
 import os
 import sys
-
 
 WIKI = False
 sorts=["heap", "merge", "quick"]
